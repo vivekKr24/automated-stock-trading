@@ -1,7 +1,9 @@
 import torch
+from torch import Tensor
 from torch.utils.data import Dataset
 from torchviz import make_dot
 
+from market_simulator.state import State
 from models.actor_net import ActorNet
 from models.ciritic_net import CriticNet
 
@@ -19,58 +21,81 @@ class ActorCriticTrainer:
         self.critic_1_optimizer = optimizer(critic_1_network.parameters())
         self.critic_2_optimizer = optimizer(critic_2_network.parameters())
 
+    def step(self):
+        self.actor_optimizer.step()
+        self.actor_optimizer.zero_grad()
+
+        self.critic_1_optimizer.step()
+        self.critic_1_optimizer.zero_grad()
+
+        self.critic_2_optimizer.step()
+        self.critic_2_optimizer.zero_grad()
+
     def update(self, batch, policy_update=False):
-        actor_optimizer = self.actor_optimizer
-        critic_1_optimizer = self.critic_1_optimizer
-        critic_2_optimizer = self.critic_2_optimizer
         actor_net = self.actor_network
         critic_1_net = self.critic_1_network
         critic_2_net = self.critic_2_network
 
-        states, actions, rewards, next_states, dones = batch
-
-
-        current_state_action_pairs = torch.cat((states, actions), dim=1)
+        states, actions, rewards, next_states, dones, current_state_action_pairs = batch
+        rewards = rewards.float()
         next_state_actions = actor_net.target(next_states)
         next_state_action_pairs = torch.cat((next_states, next_state_actions), dim=1)
         target_q_value1 = critic_1_net.target(next_state_action_pairs)
         target_q_value2 = critic_2_net.target(next_state_action_pairs)
 
-        q_values = critic_1_net(current_state_action_pairs)
         losses = []
 
         if policy_update:
+            q_values = critic_1_net(current_state_action_pairs)
             policy_loss = - torch.mean(q_values)
-            policy_loss.backward()
-            make_dot(policy_loss, params=actor_net.named_parameters()).render('policy_loss')
+            (make_dot(policy_loss,
+                      params=dict({**dict(actor_net.named_parameters()), **dict(critic_1_net.named_parameters())}))
+             .render('policy_loss'))
+            # policy_loss.backward()
             losses.append(policy_loss)
-            actor_optimizer.step()
+            # actor_optimizer.step()
+            # actor_optimizer.zero_grad()
 
         target_q = torch.min(target_q_value1, target_q_value2)
         ones = torch.ones_like(dones).float()
         done_factor = (ones - dones).view(ones.size()[0], 1)
-        y = rewards.view(rewards.size()[0], 1) + done_factor * target_q
-        y = y.detach().requires_grad_(True)
+        y = done_factor * target_q + rewards.view(rewards.size()[0], 1)
+        y = y.detach()
 
-        critic_1_input = torch.cat((states, actions.detach()), dim=1)
-        critic_1_output = critic_1_net(critic_1_input)
+        states_no_grad = states.clone().detach()
+        actions_no_grad = actions.clone().detach()
+
+        critic_1_output = critic_1_net(torch.cat((states_no_grad, actions_no_grad), dim=1))
         loss_fn = torch.nn.MSELoss()
-        critic_1_loss = loss_fn(critic_1_output, y).view(1)
+        critic_1_loss = loss_fn(critic_1_output, y)
 
-        critic_2_input = torch.cat((states, actions.detach()), dim=1)
-        critic_2_output = critic_2_net(critic_2_input)
-        critic_2_loss = loss_fn(critic_2_output, y).view(1)
+        critic_2_output = critic_2_net(torch.cat((states_no_grad, actions_no_grad), dim=1))
+        critic_2_loss = loss_fn(critic_2_output, y)
 
         make_dot(critic_1_loss, params=dict(critic_1_net.named_parameters())).render('critic_1_loss')
         make_dot(critic_2_loss, params=dict(critic_2_net.named_parameters())).render('critic_2_loss')
 
-        critic_1_loss.backward()
-        critic_2_loss.backward()
+        # critic_1_loss.float().backward()
+        # critic_2_loss.float().backward()
 
-        critic_1_optimizer.step()
-        critic_2_optimizer.step()
+        # critic_1_optimizer.step()
+        # critic_1_optimizer.zero_grad()
+        # critic_2_optimizer.step()
+        # critic_2_optimizer.zero_grad()
 
-        losses = [*losses, critic_1_loss, critic_2_loss]
-
+        losses = [critic_1_loss, critic_2_loss, *losses]
 
         return losses
+
+    def agent(self):
+        return Agent(self)
+
+
+class Agent:
+    def __init__(self, trainer: ActorCriticTrainer):
+        self.policy = trainer.actor_network.cpu()
+
+    def action(self, state: State, cpu=True):
+        if cpu:
+            return self.policy(state().cpu())
+        return self.policy(state())

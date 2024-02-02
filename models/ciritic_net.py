@@ -16,7 +16,7 @@ class CriticNet(nn.Module):
         self.critic_layer_2_target = nn.Linear(hidden_size, hidden_size)
         self.critic_layer_3_target = nn.Linear(hidden_size, 1)
 
-        self.critic_activation_fn = nn.ReLU()
+        self.critic_activation_fn = nn.Tanh()
 
     def forward(self, x):
         x = self.critic_activation_fn(self.critic_input_layer(x.float()))
@@ -24,6 +24,12 @@ class CriticNet(nn.Module):
         x = self.critic_layer_3(x)
 
         return x
+
+    def parameters(self, recurse: bool = True):
+        param_len = len(list(self.named_parameters())) // 2
+        for name, param in list(self.named_parameters(recurse=recurse))[:param_len]:
+            if name.count('target') == 0:
+                yield param
 
     def target(self, x):
         x = self.critic_activation_fn(self.critic_input_layer_target(x.float()))

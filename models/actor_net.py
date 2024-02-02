@@ -17,7 +17,7 @@ class ActorNet(nn.Module):
         self.actor_layer_2_target = nn.Linear(hidden_size, hidden_size)
         self.actor_layer_3_target = nn.Linear(hidden_size, action_size)
 
-        self.actor_activation_fn = nn.Tanh()
+        self.actor_activation_fn = nn.ReLU()
 
     def forward(self, x):
         x = self.actor_activation_fn(self.actor_input_layer(x))
@@ -25,6 +25,12 @@ class ActorNet(nn.Module):
         x = self.actor_layer_3(x)
 
         return x
+
+    def parameters(self, recurse: bool = True):
+        param_len = len(list(self.named_parameters())) // 2
+        for name, param in self.named_parameters(recurse=recurse):
+            if name.count('target') == 0:
+                yield param
 
     def target(self, x):
         x = self.actor_activation_fn(self.actor_input_layer_target(x))

@@ -32,9 +32,9 @@ class DataSource:
         return states_df.to_numpy()[45:]
 
     def load_dataset(self):
-        if os.path.isfile(self.save_path):
-            df = pd.read_csv(self.save_path)
-            df = df.drop(columns=df.columns[0])
-            return df.to_numpy()[45:]
+        # if os.path.isfile(self.save_path):
+        #     df = pd.read_csv(self.save_path)
+        #     df = df.drop(columns=df.columns[0])
+        #     return df.to_numpy()[45:]
 
         return self.download_dataset()

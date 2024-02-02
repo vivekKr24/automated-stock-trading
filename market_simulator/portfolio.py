@@ -11,7 +11,9 @@ class Portfolio:
         self.risk_free_rate = 0.08 / 260
 
     def __iter__(self):
-        return iter([self.balance, *(self.holdings.numpy().tolist())])
+        return iter([self.balance, *(self.holdings.cpu().numpy().tolist())])
+
+
 
     def update(self, action, next_day_close_prices):
         action_no_grad = action.detach()
@@ -27,7 +29,7 @@ class Portfolio:
         # Process buy actions
         cash_reqs = torch.multiply(buy_actions, torch.tensor(self.close_prices))
         total_cash_reqs = torch.sum(cash_reqs)
-        if cash_reqs > 0 and self.balance >= total_cash_reqs:
+        if 0 < total_cash_reqs <= self.balance:
             effective_buy_action = cash_reqs / total_cash_reqs
             holdings = self.holdings + effective_buy_action
             balance = balance - torch.sum(effective_buy_action * torch.tensor(self.close_prices))

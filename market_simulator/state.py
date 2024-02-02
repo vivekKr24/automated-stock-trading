@@ -18,3 +18,6 @@ class State:
 
     def __str__(self):
         return f'{self.vector.numpy()}'
+
+    def cpu(self):
+        return State(environment=self.environment, vector=self.vector.cpu(), vector_index=self.vector_index, portfolio=self.portfolio)

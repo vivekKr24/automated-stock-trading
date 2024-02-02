@@ -14,17 +14,13 @@ class TransitionDataset(Dataset):
         self.position = 0
 
     def __getitem__(self, idx):
-        if type(idx) is str:
-            index = ['state', 'action', 'reward', 'next_state', 'done']
-            l = [x[index.index(idx)] for x in self.buffer]
-            return torch.stack(l)
         return self.buffer[idx]
 
     def __len__(self):
         return len(self.buffer)
 
     def add_transition(self, state, action, next_state, reward, done):
-        transition = (state(), action, reward, next_state(), torch.tensor(float(done)))
+        transition = (state(), action, reward, next_state(), torch.tensor(float(done)), torch.cat([state().view(1, -1), action.clone().view(1, -1)], dim=1))
 
         if len(self.buffer) < self.capacity:
             self.buffer.append(transition)
