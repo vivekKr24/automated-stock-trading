@@ -6,38 +6,37 @@ class Portfolio:
     def __init__(self, tickers, holdings, balance, closing_prices=None):
         self.tickers = tickers
         self.holdings = holdings
-        self.balance = torch.tensor(balance, dtype=torch.float32)
+        self.balance = balance
         self.close_prices = closing_prices
-        self.risk_free_rate = 0.08 / 260
+        self.risk_free_rate = 0
+        # self.risk_free_rate = 0.08 / 260
 
     def __iter__(self):
-        return iter([self.balance, *(self.holdings.cpu().numpy().tolist())])
-
-
+        return iter([self.balance, *(self.holdings.tolist())])
 
     def update(self, action, next_day_close_prices):
-        action_no_grad = action.detach()
-        sell_actions = -torch.clip(action_no_grad, -torch.inf, 0)
-        buy_actions = torch.clip(action_no_grad, 0, torch.inf)
+        action_no_grad = action.detach().cpu().numpy()
+        sell_actions = -np.clip(action_no_grad, -np.inf, 0)
+        buy_actions = np.clip(action_no_grad, 0, np.inf)
 
         # Process sell actions
-        effective_sell_actions = torch.minimum(sell_actions, self.holdings)
-        sell_gain = torch.sum(effective_sell_actions * torch.tensor(self.close_prices))
+        effective_sell_actions = np.minimum(sell_actions, self.holdings)
+        sell_gain = np.sum(effective_sell_actions * self.close_prices)
         holdings = self.holdings - effective_sell_actions
         balance = self.balance * (1 + self.risk_free_rate) + sell_gain
 
         # Process buy actions
-        cash_reqs = torch.multiply(buy_actions, torch.tensor(self.close_prices))
-        total_cash_reqs = torch.sum(cash_reqs)
+        cash_reqs = np.multiply(buy_actions, self.close_prices)
+        total_cash_reqs = np.sum(cash_reqs)
         if 0 < total_cash_reqs <= self.balance:
             effective_buy_action = cash_reqs / total_cash_reqs
             holdings = self.holdings + effective_buy_action
-            balance = balance - torch.sum(effective_buy_action * torch.tensor(self.close_prices))
+            balance = balance - np.sum(effective_buy_action * self.close_prices)
 
         return Portfolio(self.tickers, holdings, balance, next_day_close_prices)
 
     def value(self):
         if self.close_prices is None:
             raise Exception("Portfolio not associated with an environment, create an environment first")
-        stock_value = torch.tensor(self.close_prices, dtype=torch.float32) * self.holdings
-        return torch.sum(stock_value) + self.balance
+        stock_value = self.close_prices * self.holdings
+        return np.sum(stock_value) + self.balance

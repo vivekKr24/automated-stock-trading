@@ -10,7 +10,7 @@ class DataSource:
         self.tickers = tickers
         self.save_path = file_name
 
-    def download_dataset(self, period="1Y"):
+    def download_dataset(self, period="5Y"):
         data = {}
         for ticker in self.tickers:
             data[ticker] = yf.download(ticker, period=period)

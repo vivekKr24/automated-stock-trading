@@ -1,5 +1,5 @@
-import torch
 import torch.nn as nn
+from torch.nn import init
 
 
 class ActorNet(nn.Module):
@@ -9,19 +9,30 @@ class ActorNet(nn.Module):
 
         # Policy Value Layers
         self.actor_input_layer = nn.Linear(state_size, hidden_size)
+        self.batch_norm_1 = nn.InstanceNorm1d(hidden_size)  # Add BatchNorm
         self.actor_layer_2 = nn.Linear(hidden_size, hidden_size)
+        self.batch_norm_2 = nn.InstanceNorm1d(hidden_size)  # Add BatchNorm
         self.actor_layer_3 = nn.Linear(hidden_size, action_size)
 
         # Policy Target Layers
         self.actor_input_layer_target = nn.Linear(state_size, hidden_size)
+        self.batch_norm_1_target = nn.InstanceNorm1d(hidden_size)  # Add BatchNorm
         self.actor_layer_2_target = nn.Linear(hidden_size, hidden_size)
+        self.batch_norm_2_target = nn.InstanceNorm1d(hidden_size)  # Add BatchNorm
         self.actor_layer_3_target = nn.Linear(hidden_size, action_size)
 
         self.actor_activation_fn = nn.ReLU()
+        # self.initialize_weights()
+
+    def initialize_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Linear):
+                init.constant_(m.weight, 110.)
+                init.constant_(m.bias, 110.)
 
     def forward(self, x):
-        x = self.actor_activation_fn(self.actor_input_layer(x))
-        x = self.actor_activation_fn(self.actor_layer_2(x))
+        x = self.actor_activation_fn(self.batch_norm_1(self.actor_input_layer(x)))
+        x = self.actor_activation_fn(self.batch_norm_2(self.actor_layer_2(x)))
         x = self.actor_layer_3(x)
 
         return x
@@ -33,14 +44,30 @@ class ActorNet(nn.Module):
                 yield param
 
     def target(self, x):
-        x = self.actor_activation_fn(self.actor_input_layer_target(x))
-        x = self.actor_activation_fn(self.actor_layer_2_target(x))
+        self.eval()
+        x = self.actor_activation_fn(self.batch_norm_1_target(self.actor_input_layer_target(x)))
+        x = self.actor_activation_fn(self.batch_norm_2_target(self.actor_layer_2_target(x)))
         x = self.actor_layer_3_target(x)
+        self.train()
 
         return x.detach()
 
-    def update_target_network(self):
-        targ_param_index = len(list(self.parameters())) / 2
-        for param, target_param in zip(self.parameter()[:targ_param_index], self.parameter()[targ_param_index:]):
-            soft_update = self.soft_update_rate * param + (1 - self.soft_update_rate) * target_param
-            target_param.data.copy_(soft_update)
+    def soft_update_target_networks(self, tau):
+        self.tau = tau
+        for target_param_name, param_name in zip(self.actor_input_layer_target._parameters.keys(),
+                                                 self.actor_input_layer._parameters.keys()):
+            target_param = getattr(self.actor_input_layer_target, target_param_name)
+            param = getattr(self.actor_input_layer, param_name)
+            target_param.data.copy_((1 - self.tau) * target_param.data + self.tau * param.data)
+
+        for target_param_name, param_name in zip(self.actor_layer_2_target._parameters.keys(),
+                                                 self.actor_layer_2._parameters.keys()):
+            target_param = getattr(self.actor_layer_2_target, target_param_name)
+            param = getattr(self.actor_layer_2, param_name)
+            target_param.data.copy_((1 - self.tau) * target_param.data + self.tau * param.data)
+
+        for target_param_name, param_name in zip(self.actor_layer_3_target._parameters.keys(),
+                                                 self.actor_layer_3._parameters.keys()):
+            target_param = getattr(self.actor_layer_3_target, target_param_name)
+            param = getattr(self.actor_layer_3, param_name)
+            target_param.data.copy_((1 - self.tau) * target_param.data + self.tau * param.data)

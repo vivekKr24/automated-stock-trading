@@ -1,14 +1,17 @@
 import torch
 
+state = 1.
+t = torch.tensor(state, requires_grad=True)
 
-def test_function(tensor):
-    tensor = tensor * tensor
-    print(tensor)
+activation = t ** 3
 
+action = activation ** 2
 
-def test_fn_call():
-    tensor = torch.tensor(2, device='cuda')
-    test_function(tensor)
+optimizer = torch.optim.Adam([t])
+optimizer.zero_grad()
+action.backward(retain_graph=True)
 
+optimizer.step()
 
-test_fn_call()
+action.backward(retain_graph=True)
+print(t.grad)
