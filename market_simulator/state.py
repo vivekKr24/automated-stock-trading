@@ -8,7 +8,7 @@ class State:
         self.environment = environment
         self.vector_index = vector_index
         self.portfolio: Portfolio = portfolio
-        self.vector = torch.tensor([*portfolio, *vector], dtype=torch.float32)
+        self.vector = torch.tensor([*vector, *portfolio], dtype=torch.float32)
 
     def __call__(self):
         return self.vector

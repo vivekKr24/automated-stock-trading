@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import matplotlib.pyplot as plt
 from train_utils import Agent, ActorCriticTrainer
@@ -36,7 +37,7 @@ def test_agent(_env: Environment, _agent: Agent, game_index, step_index, trainer
         return_list.append(total_returns)
         holdings_list.append(_current_state.portfolio.holdings[0] * 50)
         balance_list.append(_current_state.portfolio.balance)
-        close_prices.append(_current_state.portfolio.close_prices[0])
+        close_prices.append(100 * _current_state.portfolio.close_prices[0])
 
         _current_state = s_
 
@@ -49,16 +50,17 @@ def test_agent(_env: Environment, _agent: Agent, game_index, step_index, trainer
     plt.plot(action_list, label='action')
     plt.plot(q_1_value_list, label='q_1')
     plt.plot(q_1_value_list, label='q_2')
+    plt.grid(color='green', linestyle='--', linewidth=0.5)
     plt.legend()
 
     # Plot data on the second subplot
     plt.subplot(2, 1, 2)
     plt.plot(return_list)
-    plt.plot(holdings_list)
     plt.plot(balance_list)
     plt.plot(close_prices)
+    plt.grid(color='green', linestyle='--', linewidth=0.5)
 
-    plt.legend(["RETURNS", "HOLDINGS", "BALANCE", "CLOSE"], loc="lower right")
+    plt.legend(["RETURNS", "BALANCE", "CLOSE"])
 
     # plt.show()
 

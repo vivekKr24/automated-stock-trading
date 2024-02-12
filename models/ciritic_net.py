@@ -12,15 +12,15 @@ class CriticNet(nn.Module):
         # Policy Value Layers
         self.critic_input_layer = nn.Linear(state_size + action_size, hidden_size)
         self.batch_norm_1 = nn.InstanceNorm1d(hidden_size)  # Add BatchNorm
-        self.critic_layer_2 = nn.Linear(hidden_size, hidden_size)
-        self.batch_norm_2 = nn.InstanceNorm1d(hidden_size)  # Add BatchNorm
+        # self.critic_layer_2 = nn.Linear(hidden_size, hidden_size)
+        # self.batch_norm_2 = nn.InstanceNorm1d(hidden_size)  # Add BatchNorm
         self.critic_layer_3 = nn.Linear(hidden_size, 1)
 
         # Policy Target Layers
         self.critic_input_layer_target = nn.Linear(state_size + action_size, hidden_size)
         self.batch_norm_1_target = nn.InstanceNorm1d(hidden_size)  # Add BatchNorm
-        self.critic_layer_2_target = nn.Linear(hidden_size, hidden_size)
-        self.batch_norm_2_target = nn.InstanceNorm1d(hidden_size)  # Add BatchNorm
+        # self.critic_layer_2_target = nn.Linear(hidden_size, hidden_size)
+        # self.batch_norm_2_target = nn.InstanceNorm1d(hidden_size)  # Add BatchNorm
         self.critic_layer_3_target = nn.Linear(hidden_size, 1)
 
         self.critic_activation_fn = nn.ReLU()
@@ -34,7 +34,7 @@ class CriticNet(nn.Module):
 
     def forward(self, x):
         x = self.critic_activation_fn(self.batch_norm_1(self.critic_input_layer(x.float())))
-        x = self.critic_activation_fn(self.batch_norm_2(self.critic_layer_2(x)))
+        # x = self.critic_activation_fn(self.batch_norm_2(self.critic_layer_2(x)))
         x = self.critic_layer_3(x)
 
         return x
@@ -53,7 +53,7 @@ class CriticNet(nn.Module):
 
     def target(self, x):
         x = self.critic_activation_fn(self.batch_norm_1_target(self.critic_input_layer_target(x.float())))
-        x = self.critic_activation_fn(self.batch_norm_2_target(self.critic_layer_2_target(x)))
+        # x = self.critic_activation_fn(self.batch_norm_2_target(self.critic_layer_2_target(x)))
         x = self.critic_layer_3_target(x)
 
         return x.detach()
@@ -66,11 +66,11 @@ class CriticNet(nn.Module):
             param = getattr(self.critic_input_layer, param_name)
             target_param.data.copy_((1 - self.tau) * target_param.data + self.tau * param.data)
 
-        for target_param_name, param_name in zip(self.critic_layer_2_target._parameters.keys(),
-                                                 self.critic_layer_2._parameters.keys()):
-            target_param = getattr(self.critic_layer_2_target, target_param_name)
-            param = getattr(self.critic_layer_2, param_name)
-            target_param.data.copy_((1 - self.tau) * target_param.data + self.tau * param.data)
+        # for target_param_name, param_name in zip(self.critic_layer_2_target._parameters.keys(),
+        #                                          self.critic_layer_2._parameters.keys()):
+        #     target_param = getattr(self.critic_layer_2_target, target_param_name)
+        #     param = getattr(self.critic_layer_2, param_name)
+        #     target_param.data.copy_((1 - self.tau) * target_param.data + self.tau * param.data)
 
         for target_param_name, param_name in zip(self.critic_layer_3_target._parameters.keys(),
                                                  self.critic_layer_3._parameters.keys()):

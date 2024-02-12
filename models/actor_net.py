@@ -10,15 +10,15 @@ class ActorNet(nn.Module):
         # Policy Value Layers
         self.actor_input_layer = nn.Linear(state_size, hidden_size)
         self.batch_norm_1 = nn.InstanceNorm1d(hidden_size)  # Add BatchNorm
-        self.actor_layer_2 = nn.Linear(hidden_size, hidden_size)
-        self.batch_norm_2 = nn.InstanceNorm1d(hidden_size)  # Add BatchNorm
+        # self.actor_layer_2 = nn.Linear(hidden_size, hidden_size)
+        # self.batch_norm_2 = nn.InstanceNorm1d(hidden_size)  # Add BatchNorm
         self.actor_layer_3 = nn.Linear(hidden_size, action_size)
 
         # Policy Target Layers
         self.actor_input_layer_target = nn.Linear(state_size, hidden_size)
         self.batch_norm_1_target = nn.InstanceNorm1d(hidden_size)  # Add BatchNorm
-        self.actor_layer_2_target = nn.Linear(hidden_size, hidden_size)
-        self.batch_norm_2_target = nn.InstanceNorm1d(hidden_size)  # Add BatchNorm
+        # self.actor_layer_2_target = nn.Linear(hidden_size, hidden_size)
+        # self.batch_norm_2_target = nn.InstanceNorm1d(hidden_size)  # Add BatchNorm
         self.actor_layer_3_target = nn.Linear(hidden_size, action_size)
 
         self.actor_activation_fn = nn.ReLU()
@@ -32,7 +32,7 @@ class ActorNet(nn.Module):
 
     def forward(self, x):
         x = self.actor_activation_fn(self.batch_norm_1(self.actor_input_layer(x)))
-        x = self.actor_activation_fn(self.batch_norm_2(self.actor_layer_2(x)))
+        # x = self.actor_activation_fn(self.batch_norm_2(self.actor_layer_2(x)))
         x = self.actor_layer_3(x)
 
         return x
@@ -46,7 +46,7 @@ class ActorNet(nn.Module):
     def target(self, x):
         self.eval()
         x = self.actor_activation_fn(self.batch_norm_1_target(self.actor_input_layer_target(x)))
-        x = self.actor_activation_fn(self.batch_norm_2_target(self.actor_layer_2_target(x)))
+        # x = self.actor_activation_fn(self.batch_norm_2_target(self.actor_layer_2_target(x)))
         x = self.actor_layer_3_target(x)
         self.train()
 
@@ -60,11 +60,11 @@ class ActorNet(nn.Module):
             param = getattr(self.actor_input_layer, param_name)
             target_param.data.copy_((1 - self.tau) * target_param.data + self.tau * param.data)
 
-        for target_param_name, param_name in zip(self.actor_layer_2_target._parameters.keys(),
-                                                 self.actor_layer_2._parameters.keys()):
-            target_param = getattr(self.actor_layer_2_target, target_param_name)
-            param = getattr(self.actor_layer_2, param_name)
-            target_param.data.copy_((1 - self.tau) * target_param.data + self.tau * param.data)
+        # for target_param_name, param_name in zip(self.actor_layer_2_target._parameters.keys(),
+        #                                          self.actor_layer_2._parameters.keys()):
+        #     target_param = getattr(self.actor_layer_2_target, target_param_name)
+        #     param = getattr(self.actor_layer_2, param_name)
+        #     target_param.data.copy_((1 - self.tau) * target_param.data + self.tau * param.data)
 
         for target_param_name, param_name in zip(self.actor_layer_3_target._parameters.keys(),
                                                  self.actor_layer_3._parameters.keys()):

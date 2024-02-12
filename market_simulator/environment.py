@@ -1,5 +1,3 @@
-from typing import Dict
-
 from dataset.data_source import DataSource
 from market_simulator.portfolio import Portfolio
 from market_simulator.state import State
@@ -22,7 +20,8 @@ class Environment:
         self.state_size = self.action_size * (self.ticker_data_len + 1) + 1
 
     def indices(self, attr):
-        if attr == 'Close' or attr == 0:
+        attr = attr.lower()
+        if attr == 'close' or attr == 0:
             return [0 + i * self.ticker_data_len for i in range(self.action_size)]
 
     def get_reward_and_next_state(self, current_state: State, action):

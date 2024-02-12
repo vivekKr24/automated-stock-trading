@@ -21,11 +21,11 @@ class ActorCriticTrainer:
         self.critic_2_network = critic_2_network
         self.optimizer = optimizer
 
-        # for name, param in dict(self.actor_network.named_parameters()).items():
-        #     _name = name + ''
-        #     param.register_hook(lambda grad: print(f"{_name} gradient: {grad.data.cpu().detach().numpy()}"))
-        #     print(f"Hook added to {name}")
-        #
+        for name, param in dict(self.actor_network.named_parameters()).items():
+            _name = name + ''
+            param.register_hook(lambda grad: print(f"{_name} gradient: {grad.data.cpu().detach().numpy()}"))
+            print(f"Hook added to {name}")
+
         # for name, param in dict(self.critic_1_network.named_parameters()).items():
         #     param.register_hook(lambda grad: print(f"{name} gradient: {grad.data.cpu().detach().numpy()}"))
         #     print(f"Hook added to {name}")
@@ -34,7 +34,7 @@ class ActorCriticTrainer:
         #     param.register_hook(lambda grad: print(f"{name} gradient: {grad.data.cpu().detach().numpy()}"))
         #     print(f"Hook added to {name}")
 
-        self.actor_optimizer = optimizer(actor_network.parameters(), lr=1e-5)
+        self.actor_optimizer = optimizer(actor_network.parameters(), lr=1e-2)
         self.critic_1_optimizer = optimizer(critic_1_network.parameters(), lr=1e-2)
         self.critic_2_optimizer = optimizer(critic_2_network.parameters(), lr=1e-2)
 
@@ -67,21 +67,10 @@ class ActorCriticTrainer:
 
         losses = []
 
-        if policy_update:
-            q_values = critic_1_net(current_state_action_pairs)
-            policy_loss = - torch.mean(q_values)
-            # (make_dot(policy_loss,
-            #           params=dict({**dict(actor_net.named_parameters()), **dict(critic_1_net.named_parameters())}))
-            #  .render('policy_loss'))
-            losses.append(policy_loss)
-            actor_net.soft_update_target_networks(self.tau)
-            critic_1_net.soft_update_target_networks(self.tau)
-            critic_2_net.soft_update_target_networks(self.tau)
-
         target_q = torch.min(target_q_value1, target_q_value2)
         ones = torch.ones_like(dones).float()
         done_factor = (ones - dones).view(ones.size()[0], 1)
-        y = 0.1 * done_factor * target_q + rewards.view(rewards.size()[0], 1)
+        y = 0.95 * done_factor * target_q + rewards.view(rewards.size()[0], 1)
         y = y.detach()
 
         states_no_grad = states.clone().detach()
@@ -98,6 +87,17 @@ class ActorCriticTrainer:
 
         # make_dot(critic_1_loss, params=dict(critic_1_net.named_parameters())).render('critic_1_loss')
         # make_dot(critic_2_loss, params=dict(critic_2_net.named_parameters())).render('critic_2_loss')
+
+        if policy_update:
+            q_values = critic_1_net(current_state_action_pairs)
+            policy_loss = - torch.mean(q_values)
+            # (make_dot(policy_loss,
+            #           params=dict({**dict(actor_net.named_parameters()), **dict(critic_1_net.named_parameters())}))
+            #  .render('policy_loss'))
+            losses.append(policy_loss)
+            actor_net.soft_update_target_networks(self.tau)
+            critic_1_net.soft_update_target_networks(self.tau)
+            critic_2_net.soft_update_target_networks(self.tau)
 
         losses = [critic_1_loss, critic_2_loss, *losses]
 
