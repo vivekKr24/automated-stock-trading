@@ -80,9 +80,9 @@ for episode in range(1, n_episodes + 1):
             if bool(temp_state):
                 break
             next_state = None
-            for action_cnt in range(n_actions):
+            for action_idx in range(n_actions):
                 action = actor_net(temp_state().view(1, -1)).view(-1)
-                action_noise = torch.randn_like(action)
+                action_noise = torch.randn_like(action) * 10 * (action_idx - n_actions // 2)
                 action = (action + action_noise) * 10
                 reward, next_state = environment.get_reward_and_next_state(temp_state, action)
                 final_day = current_state.vector_index
@@ -108,7 +108,8 @@ for episode in range(1, n_episodes + 1):
             critic_2_loss = None
             policy_loss = None
             for batch in transition_loader:
-                all_loss = trainer.update(batch=batch, policy_update=bool(step % 20 == 0))
+                policy_update = episode > 5 and step % 20 == 1
+                all_loss = trainer.update(batch=batch, policy_update=policy_update, update_target=episode % 2)
 
                 if critic_1_loss is None:
                     critic_1_loss = all_loss[0]
@@ -133,10 +134,10 @@ for episode in range(1, n_episodes + 1):
             critic_2_loss.backward(retain_graph=True)
 
             trainer.step()
-            # if policy_loss is not None:
-            #     print(f'STEP: {step} | '
-            #           f'CRITIC_1_LOSS: {critic_1_loss.cpu().detach().item():.2f} |'
-            #           f' CRITIC_2_LOSS: {critic_2_loss.cpu().detach().item():.2f} | '
-            #           f'POLICY LOSS {policy_loss.cpu().detach().item():.2f}')
+            if step == n_steps - 1:
+                print(f'STEP: {step} | '
+                      f'CRITIC_1_LOSS: {critic_1_loss.cpu().detach().item():.2f} |'
+                      f' CRITIC_2_LOSS: {critic_2_loss.cpu().detach().item():.2f} | ')
+                      # f'POLICY LOSS {policy_loss.cpu().detach().item():.2f}')
 
     test_agent(environment, trainer.agent(), episode, '', trainer)

@@ -21,10 +21,10 @@ class ActorCriticTrainer:
         self.critic_2_network = critic_2_network
         self.optimizer = optimizer
 
-        for name, param in dict(self.actor_network.named_parameters()).items():
-            _name = name + ''
-            param.register_hook(lambda grad: print(f"{_name} gradient: {grad.data.cpu().detach().numpy()}"))
-            print(f"Hook added to {name}")
+        # for name, param in dict(self.actor_network.named_parameters()).items():
+        #     _name = name + ''
+        #     param.register_hook(lambda grad: print(f"{_name} gradient: {grad.data.cpu().detach().numpy()}"))
+        #     print(f"Hook added to {name}")
 
         # for name, param in dict(self.critic_1_network.named_parameters()).items():
         #     param.register_hook(lambda grad: print(f"{name} gradient: {grad.data.cpu().detach().numpy()}"))
@@ -34,7 +34,7 @@ class ActorCriticTrainer:
         #     param.register_hook(lambda grad: print(f"{name} gradient: {grad.data.cpu().detach().numpy()}"))
         #     print(f"Hook added to {name}")
 
-        self.actor_optimizer = optimizer(actor_network.parameters(), lr=1e-2)
+        self.actor_optimizer = optimizer(actor_network.parameters(), lr=5e-2)
         self.critic_1_optimizer = optimizer(critic_1_network.parameters(), lr=1e-2)
         self.critic_2_optimizer = optimizer(critic_2_network.parameters(), lr=1e-2)
 
@@ -50,7 +50,7 @@ class ActorCriticTrainer:
         self.critic_2_optimizer.step()
         self.critic_2_optimizer.zero_grad()
 
-    def update(self, batch, policy_update=False):
+    def update(self, batch, policy_update=False, update_target=False):
         actor_net = self.actor_network
         critic_1_net = self.critic_1_network
         critic_2_net = self.critic_2_network
@@ -95,6 +95,7 @@ class ActorCriticTrainer:
             #           params=dict({**dict(actor_net.named_parameters()), **dict(critic_1_net.named_parameters())}))
             #  .render('policy_loss'))
             losses.append(policy_loss)
+        if update_target:
             actor_net.soft_update_target_networks(self.tau)
             critic_1_net.soft_update_target_networks(self.tau)
             critic_2_net.soft_update_target_networks(self.tau)

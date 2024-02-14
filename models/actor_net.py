@@ -27,8 +27,8 @@ class ActorNet(nn.Module):
     def initialize_weights(self):
         for m in self.modules():
             if isinstance(m, nn.Linear):
-                init.constant_(m.weight, 110.)
-                init.constant_(m.bias, 110.)
+                init.constant_(m.weight, 0.)
+                init.constant_(m.bias, 0.)
 
     def forward(self, x):
         x = self.actor_activation_fn(self.batch_norm_1(self.actor_input_layer(x)))
