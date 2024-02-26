@@ -1,7 +1,9 @@
 import os
 
+import numpy as np
 import pandas as pd
 import yfinance as yf
+from matplotlib import pyplot as plt
 
 
 class DataSource:
@@ -25,11 +27,32 @@ class DataSource:
             time_series = time_series.drop(['Open', 'High', 'Low', 'Adj Close', 'Volume'], axis=1)
             data[ticker] = time_series
             data_list.append(time_series)
+            # for column in time_series.columns:
+            #     # Plot the column
+            #     plt.figure(figsize=(10, 6))
+            #     plt.plot(time_series[column])
+            #     plt.title(f'{ticker} - {column}')
+            #     plt.xlabel('Index')
+            #     plt.ylabel(column)
+            #
+            #     # Save the plot as PNG
+            #     plt.savefig('TESTS/reports/dataset/' + ticker + '_' + column + '.png')
+            #
+            #     # Close the plot to avoid displaying multiple plots in a single figure
+            #     plt.close()
+
 
         states_df = pd.concat(data_list, axis=1)
         states_df.to_csv(self.save_path)
 
-        return states_df.to_numpy()[45:]
+        states_data = states_df.to_numpy()[45:]
+
+        min_vals = np.min(states_data, axis=0)
+        max_vals = np.max(states_data, axis=0)
+
+        normalized_arr = (states_data - min_vals) / (max_vals - min_vals)
+
+        return normalized_arr * 100
 
     def load_dataset(self):
         # if os.path.isfile(self.save_path):

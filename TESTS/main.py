@@ -9,7 +9,7 @@ from tqdm import tqdm
 from market_simulator.environment import Environment
 from market_simulator.portfolio import Portfolio
 from dataset.indicators import get_default_indicators
-from metrics import test_agent
+from metrics import TradingTester
 from models.ciritic_net import CriticNet
 from train_utils import ActorCriticTrainer
 from dataset.dataset import TransitionDataset
@@ -60,12 +60,11 @@ trainer = ActorCriticTrainer(environment=environment,
                              optimizer=optimizer)
 
 n_episodes = 1000
-n_steps = 150
+n_steps = 1000
 n_days = 5
-n_actions = 5
-
-test_agent(environment, trainer.agent(), 0, '', trainer)
-
+n_actions = 10
+trading_tester = TradingTester(environment, trainer)
+trading_tester.test_agent(0, 0)
 for episode in range(1, n_episodes + 1):
     current_state = environment.initial_state()
     print(f'Episode: {episode}')
@@ -82,8 +81,8 @@ for episode in range(1, n_episodes + 1):
             next_state = None
             for action_idx in range(n_actions):
                 action = actor_net(temp_state().view(1, -1)).view(-1)
-                action_noise = torch.randn_like(action) * 10 * (action_idx - n_actions // 2)
-                action = (action + action_noise) * 10
+                action_noise = torch.tensor([action_idx - n_actions // 2])
+                action = (action + action_noise)
                 reward, next_state = environment.get_reward_and_next_state(temp_state, action)
                 final_day = current_state.vector_index
 
@@ -108,8 +107,8 @@ for episode in range(1, n_episodes + 1):
             critic_2_loss = None
             policy_loss = None
             for batch in transition_loader:
-                policy_update = episode > 5 and step % 20 == 1
-                all_loss = trainer.update(batch=batch, policy_update=policy_update, update_target=episode % 2)
+                policy_update = step % 20 == 0
+                all_loss = trainer.update(batch=batch, policy_update=policy_update, update_target=policy_update)
 
                 if critic_1_loss is None:
                     critic_1_loss = all_loss[0]
@@ -134,10 +133,10 @@ for episode in range(1, n_episodes + 1):
             critic_2_loss.backward(retain_graph=True)
 
             trainer.step()
-            if step == n_steps - 1:
-                print(f'STEP: {step} | '
-                      f'CRITIC_1_LOSS: {critic_1_loss.cpu().detach().item():.2f} |'
-                      f' CRITIC_2_LOSS: {critic_2_loss.cpu().detach().item():.2f} | ')
-                      # f'POLICY LOSS {policy_loss.cpu().detach().item():.2f}')
+            # if step == n_steps - 1:
+            #     print(f'STEP: {step} | '
+            #           f'CRITIC_1_LOSS: {critic_1_loss.cpu().detach().item():.2f} |'
+            #           f' CRITIC_2_LOSS: {critic_2_loss.cpu().detach().item():.2f} | ')
+            #           # f'POLICY LOSS {policy_loss.cpu().detach().item():.2f}')
 
-    test_agent(environment, trainer.agent(), episode, '', trainer)
+    trading_tester.test_agent(game_index=episode, step_index=0)
