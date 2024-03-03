@@ -1,6 +1,8 @@
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
+
 from train_utils import Agent, ActorCriticTrainer
 from market_simulator.environment import Environment
 
@@ -24,6 +26,7 @@ class TradingTester:
     def test_agent(self, game_index, step_index):
         total_returns = 0
         current_state = self.env.initial_state()
+        agent = self.trainer.agent()
         q_1_value_list = []
         q_2_value_list = []
 
@@ -32,11 +35,12 @@ class TradingTester:
         balance_list = []
         action_list = []
         close_prices = []
+        states = []
         message = f"Trading day index: {current_state.vector_index}"
         while not current_state:
             message = f"Trading day index: {current_state.vector_index}"
             print('\b' * len(message) + message, end='')
-            agent_action = self.trainer.agent().action(current_state)
+            agent_action = agent.action(current_state)
 
             state_action_pair = torch.cat([current_state().view(1, -1).cpu(), agent_action.view(1, -1).cpu()],
                                           dim=1).cuda()
@@ -49,10 +53,11 @@ class TradingTester:
             q_1_value_list.append(q_1.clone().detach().item())
             q_2_value_list.append(q_2.clone().detach().item())
             action_list.append(agent_action.clone().detach().item())
-            return_list.append(total_returns)
+            return_list.append(r)
             holdings_list.append(current_state.portfolio.holdings[0] * 50)
             balance_list.append(current_state.portfolio.balance)
             close_prices.append(100 * current_state.portfolio.close_prices[0])
+            states.append(current_state().cpu())
 
             current_state = s_
 
@@ -69,6 +74,8 @@ class TradingTester:
                 close_prices
             )
 
+            self.plot_and_save_tsne(states, action_list)
+
         # Update instance variables
         self.action_list = action_list
         self.q_1_value_list = q_1_value_list
@@ -79,6 +86,20 @@ class TradingTester:
         self.close_prices = close_prices
         self.game_index = game_index
         self.step_index = step_index
+
+    def plot_and_save_tsne(self, input_data, actions):
+        # Apply t-SNE to reduce the dimensionality to 2D
+        tsne = TSNE(n_components=2, random_state=42)
+        input_data_tsne = tsne.fit_transform(np.array(input_data))
+
+        # Plot the 2D plane with model predictions
+        plt.figure(figsize=(10, 6))
+        plt.scatter(input_data_tsne[:, 0], input_data_tsne[:, 1], c=actions, cmap='viridis', marker='o', s=50)
+        plt.title('t-SNE 2D Visualization with Model Predictions')
+        plt.xlabel('t-SNE Component 1')
+        plt.ylabel('t-SNE Component 2')
+        plt.colorbar()
+        plt.savefig(f'TESTS/reports/game-summary/{self.game_index + 1}_{self.step_index}_policy.jpeg')
 
     def plot_results(self, action_list, q_1_value_list, q_2_value_list, return_list, holdings_list, balance_list,
                      close_prices):
@@ -118,10 +139,10 @@ class TradingTester:
         plt.figure(figsize=(8, 6))
 
         # Plot array1
-        plt.plot(array1)
+        # plt.plot(array1)
 
         # Plot array2
-        plt.plot(array2)
+        # plt.plot(array2)
 
         # Highlight positive differences in green
         plt.fill_between(range(len(delta)), array1, array2, where=delta > 0, facecolor='green', interpolate=True, alpha=1)
@@ -133,7 +154,7 @@ class TradingTester:
         plt.title('Changes in action from prev episode to next episode')
         plt.legend(['PREV', 'CURR'])
         plt.grid(True)
-        plt.savefig(f'TESTS/reports/game-summary/{self.game_index}_{self.step_index}_action_delta.jpeg')
+        plt.savefig(f'TESTS/reports/game-summary/{self.game_index + 1}_{self.step_index}_action_delta.jpeg')
         plt.close()
 
         # Show the plot
