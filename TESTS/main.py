@@ -81,8 +81,15 @@ for episode in range(1, n_episodes + 1):
             next_state = None
             for action_idx in range(n_actions):
                 action = actor_net(temp_state().view(1, -1)).view(-1)
-                action_noise = torch.tensor([action_idx - n_actions // 2])
+                action_noise = torch.randn_like(action)
                 action = (action + action_noise)
+                if temp_state.portfolio.balance < 100:
+                    action = - torch.abs(action)
+
+                if temp_state.vector_index == 45:
+                    action = torch.abs(action)
+
+                action = action * 10
                 reward, next_state = environment.get_reward_and_next_state(temp_state, action)
                 final_day = current_state.vector_index
 
@@ -128,15 +135,16 @@ for episode in range(1, n_episodes + 1):
 
             if policy_loss is not None:
                 policy_loss.backward(retain_graph=True)
+                trainer.critic_1_optimizer.zero_grad()
                 # print('Policy Updated')
             critic_1_loss.backward(retain_graph=True)
             critic_2_loss.backward(retain_graph=True)
 
             trainer.step()
-            # if step == n_steps - 1:
-            #     print(f'STEP: {step} | '
-            #           f'CRITIC_1_LOSS: {critic_1_loss.cpu().detach().item():.2f} |'
-            #           f' CRITIC_2_LOSS: {critic_2_loss.cpu().detach().item():.2f} | ')
-            #           # f'POLICY LOSS {policy_loss.cpu().detach().item():.2f}')
+            if step == n_steps - 1:
+                print(f'STEP: {step} | '
+                      f'CRITIC_1_LOSS: {critic_1_loss.cpu().detach().item():.2f} |'
+                      f' CRITIC_2_LOSS: {critic_2_loss.cpu().detach().item():.2f} | ')
+                      # f'POLICY LOSS {policy_loss.cpu().detach().item():.2f}')
 
     trading_tester.test_agent(game_index=episode, step_index=0)
