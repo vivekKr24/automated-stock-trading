@@ -36,7 +36,7 @@ def should_update_networks(episode_idx, step_idx):
 torch.set_default_dtype(torch.float32)
 print('Torch cuda:', torch.cuda.is_available())
 torch.set_default_device('cuda')
-tickers = ['MSFT']
+tickers = ['HDFCBANK.NS']
 indicators = get_default_indicators()
 initial_holdings = np.zeros(shape=[len(tickers)])
 initial_balance = 10000

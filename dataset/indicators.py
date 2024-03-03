@@ -2,7 +2,7 @@ import pandas as pd
 
 
 def simple_moving_average(time_series_data, col_name='SMA'):
-    time_series_data[col_name] = time_series_data['Close'].rolling(window=14).mean()
+    time_series_data[col_name] = time_series_data['Close'].rolling(window=14).mean().pct_change(1)
     return time_series_data
 
 
@@ -61,7 +61,7 @@ def accumulation_distribution(time_series_data, col_name='AD'):
 
     time_series_data['MF_volume'] = time_series_data['MF_multiplier'] * time_series_data['Volume']
 
-    time_series_data[col_name] = time_series_data['MF_volume'].cumsum()
+    time_series_data[col_name] = time_series_data['MF_volume']
 
     time_series_data = time_series_data.drop(['MF_volume', 'MF_multiplier'], axis=1)
     return time_series_data
@@ -75,7 +75,7 @@ def obv(time_series_data, col_name='OBV'):
     time_series_data['OBV'] = time_series_data['Volume'] * (time_series_data['direction'] == 'up') - time_series_data[
         'Volume'] * (time_series_data['direction'] == 'down')
 
-    time_series_data[col_name] = time_series_data['OBV'].cumsum()
+    time_series_data[col_name] = time_series_data['OBV']
     time_series_data = time_series_data.drop(['price_change', 'direction'], axis=1)
     return time_series_data
 
