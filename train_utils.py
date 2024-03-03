@@ -34,11 +34,11 @@ class ActorCriticTrainer:
         #     param.register_hook(lambda grad: print(f"{name} gradient: {grad.data.cpu().detach().numpy()}"))
         #     print(f"Hook added to {name}")
 
-        self.actor_optimizer = optimizer(actor_network.parameters(), lr=5e-2)
-        self.critic_1_optimizer = optimizer(critic_1_network.parameters(), lr=1e-2)
-        self.critic_2_optimizer = optimizer(critic_2_network.parameters(), lr=1e-2)
+        self.actor_optimizer = optimizer(actor_network.parameters(), lr=1e-2)
+        self.critic_1_optimizer = optimizer(critic_1_network.parameters())
+        self.critic_2_optimizer = optimizer(critic_2_network.parameters())
 
-        self.tau = 0.5
+        self.tau = 0.2
 
     def step(self):
         self.actor_optimizer.step()
@@ -70,7 +70,7 @@ class ActorCriticTrainer:
         target_q = torch.min(target_q_value1, target_q_value2)
         ones = torch.ones_like(dones).float()
         done_factor = (ones - dones).view(ones.size()[0], 1)
-        y = 0.95 * done_factor * target_q + rewards.view(rewards.size()[0], 1)
+        y = 0.75 * done_factor * target_q + rewards.view(rewards.size()[0], 1)
         y = y.detach()
 
         states_no_grad = states.clone().detach()
@@ -79,7 +79,6 @@ class ActorCriticTrainer:
         critic_1_output = critic_1_net(torch.cat((states_no_grad, actions_no_grad), dim=1))
         loss_fn = torch.nn.MSELoss()
         critic_1_loss = loss_fn(critic_1_output, y)
-        self.critic_1_optimizer.zero_grad()
 
         critic_2_output = critic_2_net(torch.cat((states_no_grad, actions_no_grad), dim=1))
         critic_2_loss = loss_fn(critic_2_output, y)
@@ -89,7 +88,7 @@ class ActorCriticTrainer:
         # make_dot(critic_2_loss, params=dict(critic_2_net.named_parameters())).render('critic_2_loss')
 
         if policy_update:
-            q_values = critic_1_net(current_state_action_pairs)
+            q_values = critic_1_net(torch.cat((states_no_grad, actions), dim=1))
             policy_loss = - torch.mean(q_values)
             # (make_dot(policy_loss,
             #           params=dict({**dict(actor_net.named_parameters()), **dict(critic_1_net.named_parameters())}))

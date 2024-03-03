@@ -22,13 +22,6 @@ class ActorNet(nn.Module):
         self.actor_layer_3_target = nn.Linear(hidden_size, action_size)
 
         self.actor_activation_fn = nn.ReLU()
-        # self.initialize_weights()
-
-    def initialize_weights(self):
-        for m in self.modules():
-            if isinstance(m, nn.Linear):
-                init.constant_(m.weight, 0.)
-                init.constant_(m.bias, 0.)
 
     def forward(self, x):
         x = self.actor_activation_fn(self.batch_norm_1(self.actor_input_layer(x)))
